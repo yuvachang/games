@@ -1,0 +1,47 @@
+.app {
+  height: 100vh;
+  width: 100vw;
+  background-color: white;
+  font-family: 'Open Sans', sans-serif;
+  color: #232323;
+  letter-spacing: 1px;
+  display: flex;
+  flex-direction: column;
+  align-content: center; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+  text-align: center; }
+  a:visited {
+    color: inherit; }
+  a:hover {
+    cursor: pointer;
+    color: #656565; }
+  a:active {
+    color: darkgrey; }
+
+.alink {
+  font-size: 0.75em;
+  color: #656565;
+  text-decoration: underline; }
+  @media (hover: hover) {
+    .alink:hover {
+      cursor: pointer;
+      color: blue;
+      transition: 0.3s; } }
+
+.menu {
+  height: 60px;
+  background-color: #229A9B;
+  display: flex;
+  align-items: center;
+  justify-content: center; }
+
+.minesweeper-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: grey; }

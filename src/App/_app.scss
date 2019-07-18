@@ -1,0 +1,48 @@
+@import '../App/variables';
+
+.app {
+  height: 100vh;
+  width: 100vw;
+
+  background-color: white;
+
+  font-family: 'Open Sans', sans-serif;
+  color: $font-color;
+  letter-spacing: 1px;
+
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  text-align: center;
+
+  &:visited {
+    color: inherit;
+  }
+  &:hover {
+    cursor: pointer;
+    color: $font-color-l;
+    // font-size: 1.05em;
+  }
+  &:active {
+    color: darkgrey;
+  }
+}
+
+.alink {
+  font-size: 0.75em;
+  color: $font-color-l;
+  text-decoration: underline;
+
+  @media (hover: hover) {
+    &:hover {
+      cursor: pointer;
+      color: blue;
+      transition: 0.3s;
+    }
+  }
+}
