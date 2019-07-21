@@ -14,6 +14,7 @@ class Minesweeper extends Component {
   }
 
   createBoard = async selectedSize => {
+    // Add event listeners on board creation.
     this.canvas.addEventListener('mouseup', this.onMouseUp)
     this.canvas.addEventListener('mousedown', this.onMouseDown)
 
@@ -34,23 +35,31 @@ class Minesweeper extends Component {
     for (let i = 0; i < size[0]; i++) {
       board[i] = []
       for (let j = 0; j < size[1]; j++) {
-        // CELL OBJECT
+        // ## Each cell object ##
         board[i].push({
           mine: 0,
           open: 0,
           neighborMines: 0,
-          // pos: `${i}${j}`,
           pos: [i, j],
-          // i,
-          // j,
           highlighted: 0,
         })
+        // ##
       }
     }
 
+    this.setMines({ size, mineCount, board })
+
     console.log('Board initialized =>', board)
 
-    this.setMines({ size, mineCount, board })
+    // // ## Uncomment to count total mines. ##
+    // let totalmines = 0
+    // board.forEach(row=> {
+    //   row.forEach(cell=>{
+    //     if (cell.mine){totalmines+=1}
+    //   })
+    // })
+    // console.log(totalmines)
+    // // ##
 
     await this.setState({
       size,
@@ -59,7 +68,7 @@ class Minesweeper extends Component {
     })
   }
 
-  setMines = async ({ size, mineCount, board }) => {
+  setMines = ({ size, mineCount, board }, i, j) => {
     const randomize = rowOrCol => Math.floor(Math.random() * rowOrCol)
     let mines = 0
 
@@ -70,7 +79,7 @@ class Minesweeper extends Component {
     //   'includeSelf'
     // )
 
-    while (mines <= mineCount) {
+    while (mines < mineCount) {
       // Get random row and column within xy range of board.
       let row = randomize(size[0])
       let col = randomize(size[1])
@@ -81,6 +90,10 @@ class Minesweeper extends Component {
       //   continue
       // }
 
+      if (i === row && j === col) {
+        continue
+      }
+
       // Skip cell if mine already exists on cell.
       if (board[row][col].mine === 1) continue
       // Otherwise set mine.
@@ -89,9 +102,9 @@ class Minesweeper extends Component {
     }
 
     // After setting mines, set neighborCounts of mines for each cell.
-    const newBoard = this.setNeighborCounts(board)
+    board = this.setNeighborCounts(board)
 
-    return newBoard
+    return board
   }
 
   setNeighborCounts = board => {
@@ -105,13 +118,6 @@ class Minesweeper extends Component {
   }
 
   getNeighborCells = (i, j, includeSelf, board) => {
-    console.log(
-      'getting neighborcells of:',
-      i,
-      j,
-      'includeSelf:',
-      !!includeSelf
-    )
     const neighborCells = []
     const neighborPos = []
     let neighborMines = 0
@@ -135,36 +141,78 @@ class Minesweeper extends Component {
     return { neighborPos, neighborCells, neighborMines }
   }
 
-  openCell = async (i, j, board) => {
-    // if (e.target.className.includes('cell')) {
-    // const board = this.state.board
-    if (!board.length) return
+  ensureSafeFirstClick = (i, j, board) => {
+    const { neighborCells } = this.getNeighborCells(i, j, 1, board)
+    let mineCount = 0
 
-    // const cellPos = JSON.parse(e.target.getAttribute('cellpos'))
-    // const row = cellPos[0]
-    // const col = cellPos[1]
+    neighborCells.forEach(cell => {
+      if (board[cell.pos[0]][cell.pos[1]].mine) {
+        board[cell.pos[0]][cell.pos[1]].mine = 0
+        mineCount++
+      }
+    })
+
+    return this.setMines({ size: this.state.size, mineCount, board }, i, j)
+  }
+
+  cascade = (i, j, board) => {
+    // Base case: neighbors do not cascade
+    // Neighbor cells :: (cell.open===1 (prevent infinite cascade) || neighborMine!==0)
+    // Action:: open cell
+    const {neighborCells} = this.getNeighborCells(i, j, 0, board)
+
+    neighborCells.forEach(cell => {
+      const row = cell.pos[0]
+      const col = cell.pos[1]
+
+      if (!!board[row][col].neighborMines) {
+        if (!board[row][col].open) {
+          board[row][col].open = 1
+        }
+      } else if (!board[row][col].neighborMines) {
+        if (!board[row][col].open){
+          board[row][col].open = 1
+          board = this.cascade(row, col, board)
+        }
+      }
+    })
+    return board
+  }
+
+  openCell = async (i, j, board) => {
+    // if (!board.length) return
 
     // If cell is first cell open, make sure first click is on empty cascading cell.
     if (!this.state.started) {
-      // this.firstCell(e)
+      board = this.ensureSafeFirstClick(i, j, board)
+    }
+
+    // If timer is paused or uninitialized, start timer.
+    if (!this.timer.state.start) {
+      this.timer.startTimer()
     }
 
     // Open cell.
     board[i][j].open = 1
 
-    // if clicked cell neighbor count = 0, open all surrounding cells
+    // If opened cell has 0 mines and 0 neighborMines, cascade.
+    if (board[i][j].neighborMines === 0 && !board[i][j].mine) {
+      // CASCADE FUNCTION
+      board = this.cascade(i, j, board)
+    }
 
-    this.timer.startTimer()
+    // IF OPENED CELL HAS MINE, END GAME
 
     await this.setState({
       board,
+      started: true,
       holdLeft: false,
     })
-    // }
   }
 
   clearHighlights = (board, neighborsArr) => {
     if (!board) {
+      // If board not passed in, clear entire board.
       let board = this.state.board
       board.forEach(row => {
         row.forEach(cell => {
@@ -173,10 +221,9 @@ class Minesweeper extends Component {
           }
         })
       })
-      this.setState({
-        board,
-      })
+      this.setState({ board })
     } else {
+      // If board passed in, clear everything except neighboring cells around cursor.
       board.forEach(row => {
         row.forEach(cell => {
           if (neighborsArr.includes(cell.pos)) return
@@ -199,10 +246,6 @@ class Minesweeper extends Component {
 
     // Clear all highlighted cells from board.
     board = this.clearHighlights(board, neighborPos)
-
-    // neighborPos.forEach(pos => {
-    //   board[pos]
-    // })
 
     neighborCells.forEach(cell => {
       board[cell.pos[0]][cell.pos[1]].highlighted = 1
@@ -266,7 +309,7 @@ class Minesweeper extends Component {
     } else if (e.button === 0) {
       // LMB up.
 
-      // Open cell if: 
+      // Open cell if:
       // 1) LMB up on cell,
       // 2) Cell isn't already open,
       // 3) RMB isn't pressed,
@@ -283,7 +326,7 @@ class Minesweeper extends Component {
     } else if (e.button === 2) {
       // RMB up.
 
-      // Set flag if: 
+      // Set flag if:
       // 1) RMB up on cell,
       // 2) Cell doesn't have flag,
       // 3) LMB isn't pressed,
