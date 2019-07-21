@@ -7,6 +7,7 @@ class Minesweeper extends Component {
     mineCount: 0,
     board: [],
     started: false, //mines set, board layout set
+    ended: false,
 
     holdLeft: false,
     holdRight: false,
@@ -20,6 +21,7 @@ class Minesweeper extends Component {
 
     let [size, mineCount, board] = [0, 0, []]
 
+    // Determine board size/game difficulty selected.
     if (!selectedSize) return
     if (selectedSize === 'small') {
       size = [8, 8]
@@ -32,10 +34,11 @@ class Minesweeper extends Component {
       mineCount = 99
     }
 
+    // Initialize board arrays.
     for (let i = 0; i < size[0]; i++) {
       board[i] = []
       for (let j = 0; j < size[1]; j++) {
-        // ## Each cell object
+        // Set cell objects.
         board[i].push({
           mine: 0,
           flag: 0,
@@ -44,23 +47,13 @@ class Minesweeper extends Component {
           pos: [i, j],
           highlighted: 0,
         })
-        // ##
       }
     }
 
+    // Set mines after board initialized.
     this.setMines({ size, mineCount, board })
 
     console.log('Board initialized =>', board)
-
-    // // ## Uncomment to count total mines.
-    // let totalmines = 0
-    // board.forEach(row=> {
-    //   row.forEach(cell=>{
-    //     if (cell.mine){totalmines+=1}
-    //   })
-    // })
-    // console.log(totalmines)
-    // // ##
 
     await this.setState({
       size,
@@ -70,29 +63,27 @@ class Minesweeper extends Component {
   }
 
   setMines = ({ size, mineCount, board }, i, j) => {
-    const randomize = rowOrCol => Math.floor(Math.random() * rowOrCol)
-    let mines = 0
+    // If i&j passed, ensure no mines in vicinity of given cell.
+    const neighborPos = (() => {
+      if (i && j) {
+        const { neighborPos: nbc } = this.getNeighborCells(i, j, 1, board)
+        return nbc
+      } else return 0
+    })()
 
-    // MAKE FIRST CLICKED CELL CASCADE? MAKE SURE NO MINE IN +1 VICINITY
-    // const { neighborPos, neighborCells } = await this.getNeighborCells(
-    //   firstCellClicked[0],
-    //   firstCellClicked[1],
-    //   'includeSelf'
-    // )
+    // Function: generate random integer within 0-row/col.length range.
+    const randomize = rowOrCol => Math.floor(Math.random() * rowOrCol)
+
+    let mines = 0
 
     while (mines < mineCount) {
       // Get random row and column within xy range of board.
       let row = randomize(size[0])
       let col = randomize(size[1])
 
-      // avoid setting mine on clicked cell and its neighbors
-      // if (neighborPos.includes(`${row}${col}`)) {
-      //   console.log(row, col)
-      //   continue
-      // }
-
-      if (i === row && j === col) {
-        continue
+      // Avoid setting mines on 9 cell block.
+      if (neighborPos) {
+        if (neighborPos.includes(`${row}${col}`)) continue
       }
 
       // Skip cell if mine already exists on cell.
@@ -105,10 +96,21 @@ class Minesweeper extends Component {
     // After setting mines, set neighborCounts of mines for each cell.
     board = this.setNeighborCounts(board)
 
+    // // ## Uncomment to count total mines.
+    // let totalmines = 0
+    // board.forEach(row=> {
+    //   row.forEach(cell=>{
+    //     if (cell.mine){totalmines+=1}
+    //   })
+    // })
+    // console.log(totalmines)
+    // // ##
+
     return board
   }
 
   setNeighborCounts = board => {
+    // Count mines in neighboring cells for each cell on board.
     for (let i = 0, n = board.length; i < n; i++) {
       for (let j = 0, n = board[i].length; j < n; j++) {
         const { neighborMines } = this.getNeighborCells(i, j, 0, board)
@@ -122,7 +124,9 @@ class Minesweeper extends Component {
     const neighborCells = []
     const neighborPos = []
     let neighborMines = 0
+    let neighborFlags = 0
 
+    // Return 8 or 9 cell block around center point i&j.
     for (let k = -1; k <= 1; k++) {
       for (let p = -1; p <= 1; p++) {
         if (
@@ -135,17 +139,21 @@ class Minesweeper extends Component {
           neighborCells.push(board[i + k][j + p])
           neighborPos.push(`${i + k}${j + p}`)
           neighborMines += board[i + k][j + p].mine
+          if (board[i + k][j + p].flag % 3 === 1) {
+            neighborFlags++
+          }
         }
       }
     }
 
-    return { neighborPos, neighborCells, neighborMines }
+    return { neighborPos, neighborCells, neighborMines, neighborFlags }
   }
 
   ensureSafeFirstClick = (i, j, board) => {
     const { neighborCells } = this.getNeighborCells(i, j, 1, board)
     let mineCount = 0
 
+    // Count mines around clicked cell including the cell.
     neighborCells.forEach(cell => {
       if (board[cell.pos[0]][cell.pos[1]].mine) {
         board[cell.pos[0]][cell.pos[1]].mine = 0
@@ -153,34 +161,55 @@ class Minesweeper extends Component {
       }
     })
 
+    // Move mines from 9 cell block around clicked cell to rest of board.
     return this.setMines({ size: this.state.size, mineCount, board }, i, j)
   }
 
   cascade = (i, j, board) => {
-    // Base case: neighbors do not cascade
-    // Neighbor cells :: (cell.open===1 (prevent infinite cascade) || neighborMine!==0)
-    // Action:: open cell
     const { neighborCells } = this.getNeighborCells(i, j, 0, board)
 
     neighborCells.forEach(cell => {
       const row = cell.pos[0]
       const col = cell.pos[1]
 
+      // Base case: cell has neighborMines && not already open.
       if (!!board[row][col].neighborMines) {
         if (!board[row][col].open) {
           board[row][col].open = 1
         }
       } else if (!board[row][col].neighborMines) {
+        // Recurse if cell not open && has no neighborMines.
         if (!board[row][col].open) {
           board[row][col].open = 1
           board = this.cascade(row, col, board)
         }
       }
     })
+
     return board
   }
 
+  openNeighborCells = (i, j, board) => {
+    const cell = board[i][j]
+    const { neighborFlags, neighborCells } = this.getNeighborCells(
+      i,
+      j,
+      0,
+      board
+    )
+
+    if (neighborFlags === cell.neighborMines) {
+      neighborCells.forEach(cell => {
+        if (!cell.flag) {
+          this.openCell(cell.pos[0], cell.pos[1], board)
+        }
+      })
+    }
+  }
+
   openCell = async (i, j, board) => {
+    if (this.state.ended) return
+
     // If cell is first cell open, make sure first click is on empty cascading cell.
     if (!this.state.started) {
       board = this.ensureSafeFirstClick(i, j, board)
@@ -191,18 +220,27 @@ class Minesweeper extends Component {
       this.timer.startTimer()
     }
 
+    const cell = board[i][j]
     // Open cell.
-    board[i][j].open = 1
+    // // Separate function to open cell(s), return new board.
+    cell.open = 1
 
     // If opened cell has 0 mines and 0 neighborMines, cascade.
-    if (board[i][j].neighborMines === 0 && !board[i][j].mine) {
+    if (cell.neighborMines === 0 && !cell.mine) {
       board = this.cascade(i, j, board)
     }
 
     // IF OPENED CELL HAS MINE, END GAME
+    // // Run end game script, blow up all mines.
+    let ended = this.state.ended
+    if (cell.mine) {
+      ended = true
+      this.timer.pauseTimer()
+    }
 
     await this.setState({
       board,
+      ended,
       started: true,
     })
   }
@@ -254,8 +292,10 @@ class Minesweeper extends Component {
   }
 
   setFlag = (i, j, board) => {
-    board[i][j].flag++
-    this.setState({ board })
+    if (!board[i][j].open && this.state.started) {
+      board[i][j].flag++
+      this.setState({ board })
+    }
   }
 
   mouseOver = async e => {
@@ -298,13 +338,19 @@ class Minesweeper extends Component {
     let clickedCellPos = JSON.parse(e.target.getAttribute('cellpos'))
     let i = Number(clickedCellPos[0])
     let j = Number(clickedCellPos[1])
+    const cell = board[i][j]
 
     if (Date.now() - this.state.releaseTime < 50) {
-      // L+RMB released simultaneously, double clicked.
+      // L+RMB up.
 
-      // If R+LMB click on open cell, check neighboring cells for flags.
-      //   // if neighboring flags === cell.neighborMines
-      //   // open neighboring cells
+      // Open neighborCells if:
+      // 1) Game has started.
+      // 2) Clicked cell is open already.
+      // 3) NeighborFlagCount===cell.neighborMines.
+      // 3a) Unopened neighbor count === cell.neighborMines.
+      if (cell.open) {
+        this.openNeighborCells(i, j, board)
+      }
 
       this.setState({
         holdLeft: false,
@@ -318,11 +364,8 @@ class Minesweeper extends Component {
       // 2) Cell isn't already open,
       // 3) RMB isn't pressed,
       if (e.target.className.includes('cell')) {
-        if (
-          !board[i][j].open &&
-          !this.state.holdRight &&
-          (!board[i][j].flag % 3) > 0 // syntax error.
-        ) {
+        let flagStatus = cell.flag % 3
+        if (!cell.open && !this.state.holdRight && flagStatus === 0) {
           this.openCell(i, j, board)
         }
       }
@@ -334,27 +377,17 @@ class Minesweeper extends Component {
     } else if (e.button === 2) {
       // RMB up.
 
-      // Set flag if:
+      // Increment cell.flag if:
       // 1) RMB up on cell,
-      // 2) Cell doesn't have flag,
-      // 3) LMB isn't pressed,
-      if (!board[i][j].flag && !this.state.holdLeft) {
+      // 2) LMB isn't pressed,
+      if (!this.state.holdLeft) {
         // Set flag on cell.
         this.setFlag(i, j, board)
-
-        // let flagStatus = board[i][j].flag %3
-        // if (flagStatus === 1) {
-        //   // FLAG
-        // } else if (flagStatus === 2) {
-        //   // QUESTION MARK
-        // } else if (!flagstatus) {
-        //   // CLEAR FLAG
-        // }
       }
 
       // TODO:
       //x## SET FLAGS
-      // ## PREVENT OPEN CELL IF HAS FLAG%3>0
+      //x## PREVENT OPEN CELL IF HAS FLAG%3>0
       // ## R+LMB OPEN NEIGHBORS IF FLAG NUMBERS MATCH NEIGHBORMINES
       // #### this.openNeighbors function, open all neighbors except flagged
       // ###### if empty && !neighborMines, this.cascade()
@@ -404,6 +437,7 @@ class Minesweeper extends Component {
       mineCount: 0,
       board: [],
       started: false,
+      ended: false,
     })
   }
 
@@ -476,6 +510,11 @@ class Minesweeper extends Component {
                           key={`${rowIdx},${colIdx}`}>
                           {cell.neighborMines}
                           {cell.mine}
+                          {cell.flag % 3 === 1
+                            ? 'f'
+                            : cell.flag % 3 === 2
+                            ? '?'
+                            : null}
                         </div>
                       )
                     })}
