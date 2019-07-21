@@ -35,9 +35,10 @@ class Minesweeper extends Component {
     for (let i = 0; i < size[0]; i++) {
       board[i] = []
       for (let j = 0; j < size[1]; j++) {
-        // ## Each cell object ##
+        // ## Each cell object
         board[i].push({
           mine: 0,
+          flag: 0,
           open: 0,
           neighborMines: 0,
           pos: [i, j],
@@ -51,7 +52,7 @@ class Minesweeper extends Component {
 
     console.log('Board initialized =>', board)
 
-    // // ## Uncomment to count total mines. ##
+    // // ## Uncomment to count total mines.
     // let totalmines = 0
     // board.forEach(row=> {
     //   row.forEach(cell=>{
@@ -159,7 +160,7 @@ class Minesweeper extends Component {
     // Base case: neighbors do not cascade
     // Neighbor cells :: (cell.open===1 (prevent infinite cascade) || neighborMine!==0)
     // Action:: open cell
-    const {neighborCells} = this.getNeighborCells(i, j, 0, board)
+    const { neighborCells } = this.getNeighborCells(i, j, 0, board)
 
     neighborCells.forEach(cell => {
       const row = cell.pos[0]
@@ -170,7 +171,7 @@ class Minesweeper extends Component {
           board[row][col].open = 1
         }
       } else if (!board[row][col].neighborMines) {
-        if (!board[row][col].open){
+        if (!board[row][col].open) {
           board[row][col].open = 1
           board = this.cascade(row, col, board)
         }
@@ -180,8 +181,6 @@ class Minesweeper extends Component {
   }
 
   openCell = async (i, j, board) => {
-    // if (!board.length) return
-
     // If cell is first cell open, make sure first click is on empty cascading cell.
     if (!this.state.started) {
       board = this.ensureSafeFirstClick(i, j, board)
@@ -197,7 +196,6 @@ class Minesweeper extends Component {
 
     // If opened cell has 0 mines and 0 neighborMines, cascade.
     if (board[i][j].neighborMines === 0 && !board[i][j].mine) {
-      // CASCADE FUNCTION
       board = this.cascade(i, j, board)
     }
 
@@ -206,7 +204,6 @@ class Minesweeper extends Component {
     await this.setState({
       board,
       started: true,
-      holdLeft: false,
     })
   }
 
@@ -256,6 +253,11 @@ class Minesweeper extends Component {
     })
   }
 
+  setFlag = (i, j, board) => {
+    board[i][j].flag++
+    this.setState({ board })
+  }
+
   mouseOver = async e => {
     if (!e.target.className.includes('cell')) {
       this.clearHighlights()
@@ -270,6 +272,7 @@ class Minesweeper extends Component {
     this.clearHighlights()
     this.canvas.removeEventListener('mouseover', this.mouseOver)
 
+    // ## If mouse released outside of board, avoid board logic.
     if (!e.target.className.includes('cell')) {
       if (e.button === 0) {
         // LEFT BUTTON UP
@@ -289,6 +292,7 @@ class Minesweeper extends Component {
       }
       return
     }
+    // ##
 
     const board = this.state.board
     let clickedCellPos = JSON.parse(e.target.getAttribute('cellpos'))
@@ -314,7 +318,11 @@ class Minesweeper extends Component {
       // 2) Cell isn't already open,
       // 3) RMB isn't pressed,
       if (e.target.className.includes('cell')) {
-        if (!board[i][j].open && !this.state.holdRight) {
+        if (
+          !board[i][j].open &&
+          !this.state.holdRight &&
+          (!board[i][j].flag % 3) > 0 // syntax error.
+        ) {
           this.openCell(i, j, board)
         }
       }
@@ -332,7 +340,27 @@ class Minesweeper extends Component {
       // 3) LMB isn't pressed,
       if (!board[i][j].flag && !this.state.holdLeft) {
         // Set flag on cell.
+        this.setFlag(i, j, board)
+
+        // let flagStatus = board[i][j].flag %3
+        // if (flagStatus === 1) {
+        //   // FLAG
+        // } else if (flagStatus === 2) {
+        //   // QUESTION MARK
+        // } else if (!flagstatus) {
+        //   // CLEAR FLAG
+        // }
       }
+
+      // TODO:
+      //x## SET FLAGS
+      // ## PREVENT OPEN CELL IF HAS FLAG%3>0
+      // ## R+LMB OPEN NEIGHBORS IF FLAG NUMBERS MATCH NEIGHBORMINES
+      // #### this.openNeighbors function, open all neighbors except flagged
+      // ###### if empty && !neighborMines, this.cascade()
+      // ## END GAME IF MINE IS OPENED
+      // ## FLAG COUNTER VS TOTAL MINE COUNT
+      // ## WIN :: ALL EMPTY CELLS OPENED
 
       this.setState({
         holdRight: false,
