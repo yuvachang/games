@@ -5,7 +5,9 @@ class Minesweeper extends Component {
   state = {
     size: [],
     mineCount: 0,
+    flagCount: 0,
     board: [],
+    mineLocations: [],
     started: false, //mines set, board layout set
     ended: false,
 
@@ -51,7 +53,8 @@ class Minesweeper extends Component {
     }
 
     // Set mines after board initialized.
-    this.setMines({ size, mineCount, board })
+    this.setMines(size, mineCount, board)
+    // ??????? Not setting return value to 'board' but still works.
 
     console.log('Board initialized =>', board)
 
@@ -62,7 +65,7 @@ class Minesweeper extends Component {
     })
   }
 
-  setMines = ({ size, mineCount, board }, i, j) => {
+  setMines = (size, mineCount, board, i, j) => {
     // If i&j passed, ensure no mines in vicinity of given cell.
     const neighborPos = (() => {
       if (i && j) {
@@ -88,7 +91,8 @@ class Minesweeper extends Component {
 
       // Skip cell if mine already exists on cell.
       if (board[row][col].mine === 1) continue
-      // Otherwise set mine.
+
+      // Set mine.
       board[row][col].mine = 1
       mines++
     }
@@ -129,15 +133,10 @@ class Minesweeper extends Component {
     // Return 8 or 9 cell block around center point i&j.
     for (let k = -1; k <= 1; k++) {
       for (let p = -1; p <= 1; p++) {
-        if (
-          i + k >= 0 &&
-          i + k < board.length &&
-          j + p >= 0 &&
-          j + p < board[i].length
-        ) {
+        if (i + k >= 0 && i + k < board.length && j + p >= 0 && j + p < board[i].length) {
           if (!includeSelf && (k === 0 && p === 0)) continue
           neighborCells.push(board[i + k][j + p])
-          neighborPos.push(`${i + k}${j + p}`)
+          neighborPos.push(`${String(i + k).padStart(2, '0')}${String(j + p).padStart(2, '0')}`)
           neighborMines += board[i + k][j + p].mine
           if (board[i + k][j + p].flag % 3 === 1) {
             neighborFlags++
@@ -157,12 +156,13 @@ class Minesweeper extends Component {
     neighborCells.forEach(cell => {
       if (board[cell.pos[0]][cell.pos[1]].mine) {
         board[cell.pos[0]][cell.pos[1]].mine = 0
+
         mineCount++
       }
     })
 
     // Move mines from 9 cell block around clicked cell to rest of board.
-    return this.setMines({ size: this.state.size, mineCount, board }, i, j)
+    return this.setMines(this.state.size, mineCount, board, i, j)
   }
 
   cascade = (i, j, board) => {
@@ -191,24 +191,41 @@ class Minesweeper extends Component {
 
   openNeighborCells = (i, j, board) => {
     const cell = board[i][j]
-    const { neighborFlags, neighborCells } = this.getNeighborCells(
-      i,
-      j,
-      0,
-      board
-    )
+    const { neighborFlags, neighborCells } = this.getNeighborCells(i, j, 0, board)
 
     if (neighborFlags === cell.neighborMines) {
       neighborCells.forEach(cell => {
-        if (!cell.flag) {
+        if (!cell.flag && !cell.open) {
           this.openCell(cell.pos[0], cell.pos[1], board)
         }
       })
     }
   }
 
+  openAllMines = board => {
+    board.forEach(row => {
+      row.forEach(cell => {
+        if (cell.mine) {
+          board[cell.pos[0]][cell.pos[1]].open = 1
+        }
+      })
+    })
+  }
+
+  countOpenCells = board => {
+    let opened = 0
+    board.forEach(row => {
+      row.forEach(cell => {
+        if (cell.open) {
+          opened++
+        }
+      })
+    })
+    return opened
+  }
+
   openCell = async (i, j, board) => {
-    if (this.state.ended) return
+    if (this.state.ended || board[i][j].open) return
 
     // If cell is first cell open, make sure first click is on empty cascading cell.
     if (!this.state.started) {
@@ -222,19 +239,29 @@ class Minesweeper extends Component {
 
     const cell = board[i][j]
     // Open cell.
-    // // Separate function to open cell(s), return new board.
-    cell.open = 1
+    board[i][j].open = 1
 
     // If opened cell has 0 mines and 0 neighborMines, cascade.
     if (cell.neighborMines === 0 && !cell.mine) {
       board = this.cascade(i, j, board)
     }
 
-    // IF OPENED CELL HAS MINE, END GAME
-    // // Run end game script, blow up all mines.
+    // End game if a mine is opened.
     let ended = this.state.ended
     if (cell.mine) {
       ended = true
+      this.openAllMines(board)
+    }
+
+    // End and win game if all empty cells opened.
+    const emptyCells = this.state.size[0] * this.state.size[1] - this.state.mineCount
+    const openedCells = this.countOpenCells(board)
+    console.log(emptyCells, openedCells)
+    if (openedCells === emptyCells) {
+      ended = true
+    }
+
+    if (ended) {
       this.timer.pauseTimer()
     }
 
@@ -245,71 +272,163 @@ class Minesweeper extends Component {
     })
   }
 
-  clearHighlights = (board, neighborsArr) => {
-    if (!board) {
-      // If board not passed in, clear entire board.
-      let board = this.state.board
-      board.forEach(row => {
-        row.forEach(cell => {
-          if (cell.highlighted) {
-            board[cell.pos[0]][cell.pos[1]].highlighted = 0
-          }
-        })
+  countFlags = board => {
+    let flagCount = 0
+    board.forEach(row => {
+      row.forEach(cell => {
+        if (cell.flag % 3 === 1) {
+          flagCount++
+        }
       })
-      this.setState({ board })
-    } else {
-      // If board passed in, clear everything except neighboring cells around cursor.
-      board.forEach(row => {
-        row.forEach(cell => {
-          if (neighborsArr.includes(cell.pos)) return
-          if (cell.highlighted) {
-            board[cell.pos[0]][cell.pos[1]].highlighted = 0
-          }
-        })
-      })
-      return board
-    }
-  }
-
-  highlightNeighborCells = async e => {
-    // Highlight surrounding cells when L+RMB held down.
-    let { board } = this.state
-    let clickedCellPos = JSON.parse(e.target.getAttribute('cellpos'))
-    let i = Number(clickedCellPos[0])
-    let j = Number(clickedCellPos[1])
-    const { neighborCells, neighborPos } = this.getNeighborCells(i, j, 0, board)
-
-    // Clear all highlighted cells from board.
-    board = this.clearHighlights(board, neighborPos)
-
-    neighborCells.forEach(cell => {
-      board[cell.pos[0]][cell.pos[1]].highlighted = 1
     })
-
-    await this.setState({
-      board,
-    })
+    return flagCount
   }
 
   setFlag = (i, j, board) => {
     if (!board[i][j].open && this.state.started) {
       board[i][j].flag++
-      this.setState({ board })
+
+      const flagCount = this.countFlags(board)
+
+      this.setState({ board, flagCount })
     }
+  }
+
+  clearHighlights = (i, j, board, neighborPos) => {
+    if (i && j) {
+      // If board passed in, clear everything except neighboring cells around cursor.
+      board.forEach(row => {
+        row.forEach(cell => {
+          if (neighborPos.includes(`${cell.pos[0]}${cell.pos[1]}`)) return
+          if (cell.highlighted) {
+            board[cell.pos[0]][cell.pos[1]].highlighted = 0
+          }
+        })
+      })
+    } else {
+      // If board not passed in, clear entire board.
+      board = this.state.board
+      board.forEach(row => {
+        row.forEach(cell => {
+          if (cell.highlighted) {
+            board[cell.pos[0]][cell.pos[1]].highlighted = 0
+          }
+        })
+      })
+    }
+    return board
+  }
+
+  // clearHighlights = (arr, recurs, setstate) => {
+  //   arr.forEach((item, idx) => {
+  //     if (Array.isArray(item)) {
+  //       //recurse
+  //       arr[idx] = this.clearHighlights(item, 1)
+  //     } else {
+  //       if (item.highlighted) {
+  //         arr[idx].highlighted = 0
+  //       }
+  //     }
+  //   })
+  //   if (recurs) {
+  //     console.log('recursing')
+  //     return arr
+  //   } else if (setstate) {
+  //     this.setState({ board: arr })
+  //   } else {
+  //     // this.setState({ board: arr })
+  //     return arr
+  //   }
+  // }
+
+  // highlightNeighborCells = async e => {
+  //   if (!e.target.className.includes('cell')) {
+  //     let board = this.clearHighlights()
+  //     // this.clearHighlights(this.state.board,0,1)
+  //     // this.clearHighlights(board).forEach(cp => {
+  //     //   board[cp[0]][cp[1]].highlighted = 0
+  //     // })
+  //     await this.setState({ board })
+  //     return
+  //   }
+
+  //   // Highlight surrounding cells when L+RMB held down.
+  //   let { board } = this.state
+  //   let clickedCellPos = JSON.parse(e.target.getAttribute('cellpos'))
+  //   let i = Number(clickedCellPos[0])
+  //   let j = Number(clickedCellPos[1])
+  //   const { neighborCells, neighborPos } = this.getNeighborCells(i, j, 0, board)
+
+  //   // Clear all highlighted cells from board.
+  //   // board = this.clearHighlights(i, j, board, neighborPos)
+  //   // board = this.clearHighlights(board)
+  //   // this.clearHighlights(board).forEach(cp => {
+  //   //   board[cp[0]][cp[1]].highlighted = 0
+  //   // })
+
+  //   neighborCells.forEach(cell => {
+  //     if (!board[cell.pos[0]][cell.pos[1]].open && !board[cell.pos[0]][cell.pos[1]].highlighted) {
+  //       board[cell.pos[0]][cell.pos[1]].highlighted = 1
+  //     }
+  //   })
+
+  //   await this.setState({ board })
+  // }
+
+  highlightNeighborCells = (i, j) => {
+    // const {neighborPos} = this.getNeighborCells(i,j,0,this.state.board)
+
+    for (let k = -2; k <= 2; k++) {
+      for (let p = -2; p <= 2; p++) {
+        if (i + k >= 0 && i + k < this.state.board.length && j + p >= 0 && j + p < this.state.board[i].length) {
+          if (k === 0 && p === 0) continue
+          const elid = `${String(i + k).padStart(2, '0')}${String(j + p).padStart(2, '0')}`
+          if (Math.abs(p) === 2 || Math.abs(k) === 2) {
+            document.getElementById(elid).classList.remove('highlighted')
+          } else {
+            document.getElementById(elid).classList.add('highlighted')
+          }
+        }
+      }
+    }
+  }
+
+  clearAllHighlights = () => {
+    this.state.board.forEach(row => {
+      row.forEach(cell => {
+        const elid = `${String(cell.pos[0]).padStart(2, '0')}${String(cell.pos[1]).padStart(2, '0')}`
+        document.getElementById(elid).classList.remove('highlighted')
+      })
+    })
   }
 
   mouseOver = async e => {
-    if (!e.target.className.includes('cell')) {
-      this.clearHighlights()
-      return
+    // if (!e.target.className.includes('cell')) {
+    //   this.clearHighlights()
+    //   return
+    // }
+    let clickedCellPos = JSON.parse(e.target.getAttribute('cellpos'))
+    let i = Number(clickedCellPos[0])
+    let j = Number(clickedCellPos[1])
+    // console.log('mouseOver, calling highlightNeighborCells')
+
+    console.log(document.getElementById(`${String(i).padStart(2, '0')}${String(j).padStart(2, '0')}`))
+    // this.highlightNeighborCells(e)
+
+    if (this.highlightTimeout) {
+      window.clearTimeout(this.highlightTimeout)
     }
 
-    console.log('mouseOver, calling highlightNeighborCells')
-    this.highlightNeighborCells(e)
+    this.highlightNeighborCells(i, j)
+
+    
   }
 
   onMouseUp = e => {
-    this.clearHighlights()
+    this.highlightTimeout = window.setTimeout(this.clearAllHighlights, 15)
+    // this.clearHighlights()
+    // let board = this.clearHighlights(this.state.board)
+
     this.canvas.removeEventListener('mouseover', this.mouseOver)
 
     // ## If mouse released outside of board, avoid board logic.
@@ -319,6 +438,7 @@ class Minesweeper extends Component {
         this.setState(prevState => {
           if (prevState.holdLeft) {
             return {
+              // board,
               holdLeft: false,
               releaseTime: Date.now(),
             }
@@ -326,6 +446,7 @@ class Minesweeper extends Component {
         })
       } else if (e.button === 2) {
         this.setState({
+          // board,
           holdRight: false,
           releaseTime: Date.now(),
         })
@@ -353,6 +474,7 @@ class Minesweeper extends Component {
       }
 
       this.setState({
+        // board,
         holdLeft: false,
         holdRight: false,
       })
@@ -371,6 +493,7 @@ class Minesweeper extends Component {
       }
 
       this.setState({
+        // board,
         holdLeft: false,
         releaseTime: Date.now(),
       })
@@ -388,14 +511,17 @@ class Minesweeper extends Component {
       // TODO:
       //x## SET FLAGS
       //x## PREVENT OPEN CELL IF HAS FLAG%3>0
-      // ## R+LMB OPEN NEIGHBORS IF FLAG NUMBERS MATCH NEIGHBORMINES
-      // #### this.openNeighbors function, open all neighbors except flagged
-      // ###### if empty && !neighborMines, this.cascade()
-      // ## END GAME IF MINE IS OPENED
+      //x## R+LMB OPEN NEIGHBORS IF FLAG NUMBERS MATCH NEIGHBORMINES
+      //x#### this.openNeighbors function, open all neighbors except flagged
+      //x###### if empty && !neighborMines, this.cascade()
+      //x## END GAME IF MINE IS OPENED
+      //x#### End game sequence, blow all mines.
       // ## FLAG COUNTER VS TOTAL MINE COUNT
       // ## WIN :: ALL EMPTY CELLS OPENED
+      // #### Condition: all empty cells opened regardless of flags.
 
       this.setState({
+        // board,
         holdRight: false,
         releaseTime: Date.now(),
       })
@@ -459,17 +585,11 @@ class Minesweeper extends Component {
             <div className='minesweeper-menu'>
               <div>
                 <button onClick={this.clearBoard}>Back</button>
-                <button onClick={() => this.timer.startTimer()}>
-                  Start Timer
-                </button>
-                <button onClick={() => this.timer.pauseTimer()}>
-                  Pause Timer
-                </button>
-                <button onClick={() => this.timer.clearTimer()}>
-                  Clear Timer
-                </button>
+                <button onClick={() => this.timer.startTimer()}>Start Timer</button>
+                <button onClick={() => this.timer.pauseTimer()}>Pause Timer</button>
+                <button onClick={() => this.timer.clearTimer()}>Clear Timer</button>
               </div>
-
+              Flags: {this.state.flagCount}
               <Timer ref={node => (this.timer = node)} />
             </div>
           )}
@@ -477,15 +597,9 @@ class Minesweeper extends Component {
           {/* SELECT BOARD SIZE */}
           {!size.length && (
             <div className='select-board'>
-              <button onClick={() => this.createBoard('small')}>
-                Easy (8x8)
-              </button>
-              <button onClick={() => this.createBoard('medium')}>
-                Medium (16x16)
-              </button>
-              <button onClick={() => this.createBoard('large')}>
-                Hard (30x30)
-              </button>
+              <button onClick={() => this.createBoard('small')}>Easy (8x8)</button>
+              <button onClick={() => this.createBoard('medium')}>Medium (16x16)</button>
+              <button onClick={() => this.createBoard('large')}>Hard (30x30)</button>
             </div>
           )}
 
@@ -503,18 +617,13 @@ class Minesweeper extends Component {
                     {row.map((cell, colIdx) => {
                       return (
                         <div
-                          className={`cell${cell.open ? ' open' : ''}${
-                            holdLeft ? ' hover' : ''
-                          }${cell.highlighted ? ' highlighted' : ''}`}
+                          className={`cell${cell.open ? ' open' : ''}${holdLeft ? ' hover' : ''}${cell.highlighted ? ' highlighted' : ''}`}
+                          id={`${String(rowIdx).padStart(2, '0')}${String(colIdx).padStart(2, '0')}`}
                           cellpos={`[${rowIdx},${colIdx}]`}
                           key={`${rowIdx},${colIdx}`}>
                           {cell.neighborMines}
                           {cell.mine}
-                          {cell.flag % 3 === 1
-                            ? 'f'
-                            : cell.flag % 3 === 2
-                            ? '?'
-                            : null}
+                          {cell.flag % 3 === 1 ? 'f' : cell.flag % 3 === 2 ? '?' : null}
                         </div>
                       )
                     })}
