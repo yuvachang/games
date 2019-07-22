@@ -7,8 +7,9 @@ export default function Routes() {
     <Route
       render={() => (
         <Switch>
-          <Route exact path='/' component={Home} />
+          {/* <Route exact path='/' component={Home} /> */}
           <Route path='/minesweeper' component={Minesweeper} />
+          <Redirect from='/' to='/minesweeper' component={() => null} />
           <Redirect from='*' to='/' component={() => null} />
         </Switch>
       )}

@@ -22,9 +22,7 @@ class Timer extends Component {
       let seconds = (Date.now() - start) / 1000 + currentTimer
       const minutes = Math.floor(seconds / 60)
       seconds = seconds - minutes * 60
-      const timer = `${String(minutes).padStart(2, '0')}:${seconds
-        .toFixed(1)
-        .padStart(4, '0')}`
+      const timer = `${String(minutes).padStart(2, '0')}:${seconds.toFixed(1).padStart(4, '0')}`
 
       await this.setState({
         start,
@@ -64,7 +62,11 @@ class Timer extends Component {
 
   render() {
     const { start, timer } = this.state
-    return <div className='timer'>Time: {timer}</div>
+    return (
+      <div className='timer'>
+        <h3>Time: {timer}</h3>
+      </div>
+    )
   }
 }
 
