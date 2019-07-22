@@ -533,12 +533,13 @@ class Minesweeper extends Component {
                   <img alt='reset' src='icons/reset.svg' className='icon' />
                 </button>
               </div>
+
+              <div className='counter'>
+                <h3> Mines:</h3> <h3>{this.state.mineCount}</h3>
+              </div>
               <div className='counter'>
                 <h3>Flags:</h3>
                 <h3>{this.state.flagCount}</h3>
-              </div>
-              <div className='counter'>
-                <h3> Mines:</h3> <h3>{this.state.mineCount}</h3>
               </div>
               <Timer ref={node => (this.timer = node)} />
             </div>
