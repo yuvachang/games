@@ -522,15 +522,15 @@ class Minesweeper extends Component {
               <div className='buttons'>
                 <button onClick={this.clearBoard}>
                   {/* Change Difficulty */}
-                  <img alt='pause' src='/icons/back.svg' className='icon' />
+                  <img alt='back' src='icons/back.svg' className='icon' />
                 </button>
                 <button className={`${started && !ended ? '' : 'hidden'}`} onClick={this.timer ? this.timer.pauseTimer : null}>
                   {/* Pause Timer */}
-                  <img alt='pause' src='/icons/pause.svg' className='icon' />
+                  <img alt='pause' src='icons/pause.svg' className='icon' />
                 </button>
                 <button className={`${started ? '' : 'hidden'}`} onClick={this.startOver}>
                   {/* Start Over */}
-                  <img alt='pause' src='/icons/reset.svg' className='icon' />
+                  <img alt='reset' src='icons/reset.svg' className='icon' />
                 </button>
               </div>
               <div className='counter'>
