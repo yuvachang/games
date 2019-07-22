@@ -195,7 +195,7 @@ class Minesweeper extends Component {
 
     if (neighborFlags === cell.neighborMines) {
       neighborCells.forEach(cell => {
-        if (!cell.flag && !cell.open) {
+        if (cell.flag % 3 === 0 && !cell.open) {
           this.openCell(cell.pos[0], cell.pos[1], board)
         }
       })
@@ -261,6 +261,8 @@ class Minesweeper extends Component {
     else if (openedCells === emptyCells) {
       ended = true
       victory = true
+      // Set flags on remaining mines to mark mines.
+      this.flagRemainingMines(board)
     }
 
     // Stop timer if game ends.
@@ -273,6 +275,16 @@ class Minesweeper extends Component {
       ended,
       victory,
       started: true,
+    })
+  }
+
+  flagRemainingMines = board => {
+    board.forEach(row => {
+      row.forEach(cell => {
+        if (cell.mine) {
+          cell.flag = 1
+        }
+      })
     })
   }
 
@@ -384,6 +396,7 @@ class Minesweeper extends Component {
     let i = Number(clickedCellPos[0])
     let j = Number(clickedCellPos[1])
     const cell = board[i][j]
+    console.log(i, j, e.target)
 
     if (Date.now() - this.state.releaseTime < 50) {
       // L+RMB up.
@@ -569,7 +582,18 @@ class Minesweeper extends Component {
                           id={`${String(rowIdx).padStart(2, '0')}${String(colIdx).padStart(2, '0')}`}
                           cellpos={`[${rowIdx},${colIdx}]`}
                           key={`${rowIdx},${colIdx}`}>
-                          {cell.open ? (cell.mine ? 'X' : `${cell.neighborMines}`) : cell.flag % 3 === 1 ? 'f' : cell.flag % 3 === 2 ? '?' : null}
+                          {cell.open ? (
+                            cell.mine ? (
+                              'X'
+                            ) : (
+                              `${cell.neighborMines}`
+                            )
+                          ) : cell.flag % 3 === 1 ? (
+                            <img alt='flag' src='icons/flag.svg' className='cell icon' cellpos={`[${rowIdx},${colIdx}]`} />
+                          ) : // 'f'
+                          cell.flag % 3 === 2 ? (
+                            '?'
+                          ) : null}
                         </div>
                       )
                     })}
