@@ -378,6 +378,12 @@ class Minesweeper extends Component {
   highlightNeighborCells = (i, j) => {
     // const {neighborPos} = this.getNeighborCells(i,j,0,this.state.board)
 
+    if (this.highlightTimeout) {
+      window.clearTimeout(this.highlightTimeout)
+    }
+
+    let highlighted = []
+
     for (let k = -2; k <= 2; k++) {
       for (let p = -2; p <= 2; p++) {
         if (i + k >= 0 && i + k < this.state.board.length && j + p >= 0 && j + p < this.state.board[i].length) {
@@ -387,17 +393,22 @@ class Minesweeper extends Component {
             document.getElementById(elid).classList.remove('highlighted')
           } else {
             document.getElementById(elid).classList.add('highlighted')
+            highlighted.push(elid)
           }
         }
       }
     }
+
+    this.highlightTimeout = window.setTimeout(() => {this.clearAllHighlights(highlighted)}, 15)
   }
 
-  clearAllHighlights = () => {
+  clearAllHighlights = (highlighted) => {
     this.state.board.forEach(row => {
       row.forEach(cell => {
         const elid = `${String(cell.pos[0]).padStart(2, '0')}${String(cell.pos[1]).padStart(2, '0')}`
-        document.getElementById(elid).classList.remove('highlighted')
+        if (!highlighted.includes(elid)) {
+          document.getElementById(elid).classList.remove('highlighted')
+        }
       })
     })
   }
@@ -415,13 +426,10 @@ class Minesweeper extends Component {
     console.log(document.getElementById(`${String(i).padStart(2, '0')}${String(j).padStart(2, '0')}`))
     // this.highlightNeighborCells(e)
 
-    if (this.highlightTimeout) {
-      window.clearTimeout(this.highlightTimeout)
-    }
+   
 
     this.highlightNeighborCells(i, j)
 
-    
   }
 
   onMouseUp = e => {
