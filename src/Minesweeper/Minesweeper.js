@@ -1,5 +1,7 @@
 import React, { Component } from 'react'
 import Timer from './Timer'
+import Leaderboard from './Leaderboard'
+import AddTimeToDB from './AddTimeToDB'
 
 class Minesweeper extends Component {
   state = {
@@ -10,6 +12,8 @@ class Minesweeper extends Component {
     started: false, //mines set, board layout set
     ended: false,
     victory: false,
+
+    showLeaderBoard: false,
 
     holdLeft: false,
     holdRight: false,
@@ -415,6 +419,11 @@ class Minesweeper extends Component {
         holdRight: false,
       })
     } else if (e.button === 0) {
+      // this.setState({
+      //   victory: true,
+      // })
+      // return
+
       // LMB up.
 
       // Open cell if:
@@ -502,6 +511,13 @@ class Minesweeper extends Component {
       started: false,
       ended: false,
       victory: false,
+      showLeaderBoard: false,
+    })
+  }
+
+  showLeaderBoard = () => {
+    this.setState({
+      showLeaderBoard: true,
     })
   }
 
@@ -511,12 +527,13 @@ class Minesweeper extends Component {
   }
 
   render() {
-    const { size, mineCount, board, started, holdLeft, ended } = this.state
+    const { size, board, started, holdLeft, ended, victory, showLeaderBoard, mineCount, flagCount } = this.state
     return (
       <div className='minesweeper-container' ref={node => (this.canvas = node)}>
         {/* SELECT DIFFICULTY */}
         {!size.length && (
           <div className='select-board'>
+            <Leaderboard />
             <button onClick={() => this.createBoard('small')}>Easy (8x8)</button>
             <button onClick={() => this.createBoard('medium')}>Medium (16x16)</button>
             <button onClick={() => this.createBoard('large')}>Hard (30x30)</button>
@@ -548,22 +565,28 @@ class Minesweeper extends Component {
               </div>
 
               <div className='counter'>
-                <h3> Mines:</h3> <h3>{this.state.mineCount}</h3>
+                <h3> Mines:</h3> <h3>{mineCount}</h3>
               </div>
               <div className='counter'>
                 <h3>Flags:</h3>
-                <h3>{this.state.flagCount}</h3>
+                <h3>{flagCount}</h3>
               </div>
               <Timer ref={node => (this.timer = node)} />
             </div>
             <div className='board'>
-              {this.state.victory && (
+              {showLeaderBoard && (
+                <div className='game-end-overlay'>
+                  <Leaderboard />
+                </div>
+              )}
+              {victory && !showLeaderBoard && (
                 <div className='game-end-overlay'>
                   <h3>You won in</h3>
                   <h3>{this.timer.state.seconds.toFixed(1)} seconds!</h3>
+                  <AddTimeToDB time={this.timer.state.seconds} showLeaderBoard={this.showLeaderBoard} size={size}/>
                 </div>
               )}
-              {this.state.ended && !this.state.victory && (
+              {ended && !victory && (
                 <div className='game-end-overlay'>
                   <h3>You lost in </h3>
                   <h3>{this.timer.state.seconds.toFixed(1)} seconds!</h3>

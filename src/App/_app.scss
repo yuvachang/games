@@ -18,7 +18,8 @@
 h1,
 h2,
 h3,
-h4 {
+h4,
+h5 {
   color: $font-color-ll;
   margin: 0;
   padding: 0;
@@ -68,8 +69,8 @@ a {
 button {
   background-color: white;
 
-  // width: 100%;
-  max-width: 170px;
+  width: 100%;
+  // max-width: 170px;
 
   // height: 40px;
 
@@ -115,7 +116,7 @@ button {
       transition: 0.1s;
 
       .icon {
-        opacity: 0.7; 
+        opacity: 0.7;
         transition: 0.1s;
       }
     }
@@ -129,4 +130,24 @@ button {
   -ms-user-select: none; /* IE10+ */
   -o-user-select: none;
   user-select: none;
+}
+
+::-webkit-scrollbar {
+  display: block;
+  width: 3px;
+
+  &-track {
+    display: none;
+  }
+
+  /* Handle */
+  &-thumb {
+    background: $orange;
+    // border-radius: 7px;
+
+    &:hover {
+      background: white;
+      cursor: pointer;
+    }
+  }
 }

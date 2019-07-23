@@ -1,6 +1,9 @@
 import React from 'react'
 import { Route, Switch, Redirect } from 'react-router-dom'
-import { Home, Minesweeper } from '../components'
+import {
+  // Home,
+  Minesweeper,
+} from '../components'
 
 export default function Routes() {
   return (
