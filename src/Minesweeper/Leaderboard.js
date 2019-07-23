@@ -13,8 +13,11 @@ class Leaderboard extends Component {
       await timesGet.forEach(qSnap => {
         data.push(qSnap.data())
       })
-      let topFive = await Promise.all(data)
-      topFive = topFive.sort((a, b) => (Number(a.test) > Number(b.test) ? 1 : -1)).slice(0, 5)
+      const allTimes = await Promise.all(data)
+      if (this.props.size) {
+        allTimes.filter(entry=>entry.size[0]===this.props.size[0])
+      }
+      const topFive = allTimes.sort((a, b) => (Number(a.time) > Number(b.time) ? 1 : -1)).slice(0, 5)
       this.setState({ topFive })
     } catch (error) {
       console.error(error)

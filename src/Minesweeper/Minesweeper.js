@@ -17,6 +17,7 @@ class Minesweeper extends Component {
 
     holdLeft: false,
     holdRight: false,
+    holdMiddle: false,
     releaseTime: 0,
   }
 
@@ -125,6 +126,7 @@ class Minesweeper extends Component {
     for (let i = 0, n = board.length; i < n; i++) {
       for (let j = 0, n = board[i].length; j < n; j++) {
         const { neighborMines } = this.getNeighborCells(i, j, 0, board)
+
         board[i][j].neighborMines = neighborMines
       }
     }
@@ -142,6 +144,7 @@ class Minesweeper extends Component {
         if (i + k >= 0 && i + k < board.length && j + p >= 0 && j + p < board[i].length) {
           if (!includeSelf && (k === 0 && p === 0)) continue
           neighborCells.push(board[i + k][j + p])
+
           neighborPos.push(`${String(i + k).padStart(2, '0')}${String(j + p).padStart(2, '0')}`)
           neighborMines += board[i + k][j + p].mine
           if (board[i + k][j + p].flag % 3 === 1) {
@@ -400,9 +403,8 @@ class Minesweeper extends Component {
     let i = Number(clickedCellPos[0])
     let j = Number(clickedCellPos[1])
     const cell = board[i][j]
-    console.log(i, j, e.target)
 
-    if (Date.now() - this.state.releaseTime < 50) {
+    if (Date.now() - this.state.releaseTime < 100 || e.button === 1) {
       // L+RMB up.
 
       // Open neighborCells if:
@@ -417,13 +419,9 @@ class Minesweeper extends Component {
       this.setState({
         holdLeft: false,
         holdRight: false,
+        holdMiddle: false,
       })
     } else if (e.button === 0) {
-      // this.setState({
-      //   victory: true,
-      // })
-      // return
-
       // LMB up.
 
       // Open cell if:
@@ -458,7 +456,6 @@ class Minesweeper extends Component {
       }
 
       this.setState({
-        // board,
         holdRight: false,
         releaseTime: Date.now(),
       })
@@ -466,24 +463,34 @@ class Minesweeper extends Component {
   }
 
   onMouseDown = async e => {
-    // trigger hover class for board
-    if (e.button === 0) {
-      // LEFT BUTTON DOWN
-      // left click: hover only individual cells
-      await this.setState({
-        holdLeft: true,
-      })
-    } else if (e.button === 2) {
-      // RIGHT BUTTON DOWN
-      await this.setState({
-        holdRight: true,
-      })
+    let button = e.button
+    switch (button) {
+      case 0:
+        // LMB down.
+        // Divs + hover class.
+        await this.setState({
+          holdLeft: true,
+        })
+        break
+      case 1:
+        // MMB down.
+        // Mouse over highlights.
+        await this.setState({
+          holdMiddle: true,
+        })
+        break
+      case 2:
+        // RMB down.
+        // Nothing. Flags set on mouseUp.
+        await this.setState({
+          holdRight: true,
+        })
+        break
     }
 
-    const { holdLeft, holdRight } = this.state
-    if (holdLeft && holdRight) {
-      // highlight surrounding cells
-      // trigger highlight function for this cell, mouseOver initiates for cells mouseOver'd after this cell
+    const { holdLeft, holdRight, holdMiddle } = this.state
+    if ((holdLeft && holdRight) || holdMiddle) {
+      // this.mouseOver called on even after current event.
       this.mouseOver(e)
       this.canvas.addEventListener('mouseover', this.mouseOver)
     }
@@ -578,20 +585,24 @@ class Minesweeper extends Component {
             <div className='board'>
               {showLeaderBoard && (
                 <div className='game-end-overlay'>
-                  <Leaderboard />
+                  <Leaderboard size={size} />
                 </div>
               )}
               {victory && !showLeaderBoard && (
                 <div className='game-end-overlay'>
                   <h3>You won in</h3>
                   <h3>{this.timer.state.seconds.toFixed(1)} seconds!</h3>
-                  <AddTimeToDB time={this.timer.state.seconds} showLeaderBoard={this.showLeaderBoard} size={size}/>
+                  <AddTimeToDB
+                    time={(this.timer.state.seconds + this.timer.state.minutes * 60).toFixed(1)}
+                    showLeaderBoard={this.showLeaderBoard}
+                    size={size}
+                  />
                 </div>
               )}
               {ended && !victory && (
                 <div className='game-end-overlay'>
                   <h3>You lost in </h3>
-                  <h3>{this.timer.state.seconds.toFixed(1)} seconds!</h3>
+                  <h3>{(this.timer.state.seconds + this.timer.state.minutes * 60).toFixed(1)} seconds!</h3>
                 </div>
               )}
 
