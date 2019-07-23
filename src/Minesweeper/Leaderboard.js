@@ -43,7 +43,7 @@ class Leaderboard extends Component {
               <div className='score' key={Math.random() * 999}>
                 <div>{score.name}: &nbsp;</div>
                 <div style={{ textAlign: 'right' }}>
-                  {score.time.toFixed(1)} seconds on {score.size[0]}x{score.size[1]}.
+                  {score.time.toFixed(1)} seconds on {score.size[0] === 8 ? 'Easy' : score.size[0] === 16 ? 'Medium' : 'Hard'}.
                 </div>
               </div>
             )

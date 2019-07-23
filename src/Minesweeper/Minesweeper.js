@@ -501,6 +501,8 @@ class Minesweeper extends Component {
       board: [],
       started: false,
       ended: false,
+      victory: false,
+      showLeaderBoard: false,
     })
   }
 
