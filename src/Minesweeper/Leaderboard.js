@@ -3,7 +3,7 @@ import { firestore } from '../firebase'
 
 class Leaderboard extends Component {
   state = {
-    topFive: [],
+    topTimes: [],
   }
 
   getData = async () => {
@@ -13,12 +13,18 @@ class Leaderboard extends Component {
       await timesGet.forEach(qSnap => {
         data.push(qSnap.data())
       })
-      const allTimes = await Promise.all(data)
+      let allTimes = await Promise.all(data)
+      let topTimes
+
       if (this.props.size) {
-        allTimes.filter(entry=>entry.size[0]===this.props.size[0])
+        topTimes = allTimes
+          .filter(entry => entry.size[0] === this.props.size[0])
+          .sort((a, b) => (Number(a.time) > Number(b.time) ? 1 : -1))
+          .slice(0, 5)
+      } else {
+        topTimes = allTimes.sort((a, b) => (Number(a.time) > Number(b.time) ? 1 : -1)).slice(0, 10)
       }
-      const topFive = allTimes.sort((a, b) => (Number(a.time) > Number(b.time) ? 1 : -1)).slice(0, 5)
-      this.setState({ topFive })
+      this.setState({ topTimes })
     } catch (error) {
       console.error(error)
     }
@@ -35,13 +41,13 @@ class Leaderboard extends Component {
   }
 
   render() {
-    const { topFive } = this.state
+    const { topTimes } = this.state
     return (
       <div className='leaderboard'>
-        <h4 style={{ textAlign: 'center', marginBottom: '4px' }}>Top 5 times:</h4>
+        <h4 style={{ textAlign: 'center', marginBottom: '4px' }}>Top {this.props.size ? '5' : '10'} times:</h4>
 
-        {!!topFive.length ? (
-          topFive.map(score => {
+        {!!topTimes.length ? (
+          topTimes.map(score => {
             return (
               <div className='score' key={Math.random() * 999}>
                 <div>{score.name}: &nbsp;</div>

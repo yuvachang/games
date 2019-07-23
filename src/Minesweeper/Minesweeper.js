@@ -422,6 +422,12 @@ class Minesweeper extends Component {
         holdMiddle: false,
       })
     } else if (e.button === 0) {
+      // this.setState({
+      //   victory:true,
+      //   ended: true,
+      // })
+      // return
+      
       // LMB up.
 
       // Open cell if:
@@ -591,9 +597,9 @@ class Minesweeper extends Component {
               {victory && !showLeaderBoard && (
                 <div className='game-end-overlay'>
                   <h3>You won in</h3>
-                  <h3>{this.timer.state.seconds.toFixed(1)} seconds!</h3>
+                  <h3>{(this.timer.state.seconds + this.timer.state.minutes * 60).toFixed(1)} seconds!</h3>
                   <AddTimeToDB
-                    time={(this.timer.state.seconds + this.timer.state.minutes * 60).toFixed(1)}
+                    time={Number((this.timer.state.seconds + this.timer.state.minutes * 60).toFixed(1))}
                     showLeaderBoard={this.showLeaderBoard}
                     size={size}
                   />
