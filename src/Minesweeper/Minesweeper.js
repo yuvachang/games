@@ -21,18 +21,6 @@ class Minesweeper extends Component {
     releaseTime: 0,
   }
 
-  // TODO:
-  //x## SET FLAGS
-  //x## PREVENT OPEN CELL IF HAS FLAG%3>0
-  //x## R+LMB OPEN NEIGHBORS IF FLAG NUMBERS MATCH NEIGHBORMINES
-  //x#### this.openNeighbors function, open all neighbors except flagged
-  //x###### if empty && !neighborMines, this.cascade()
-  //x## END GAME IF MINE IS OPENED
-  //x#### End game sequence, blow all mines.
-  //x## FLAG COUNTER VS TOTAL MINE COUNT
-  //x## WIN :: ALL EMPTY CELLS OPENED
-  //x#### Condition: all empty cells opened regardless of flags.
-
   createBoard = async selectedSize => {
     // Add event listeners on board creation.
     this.canvas.addEventListener('mouseup', this.onMouseUp)
@@ -422,12 +410,6 @@ class Minesweeper extends Component {
         holdMiddle: false,
       })
     } else if (e.button === 0) {
-      // this.setState({
-      //   victory:true,
-      //   ended: true,
-      // })
-      // return
-      
       // LMB up.
 
       // Open cell if:
